@@ -3,6 +3,14 @@
 A jobsite app for electricians: bending calculators that **show their work**, plus
 project and crew management with team chat.
 
+**Live app:** https://zsheppard78.github.io/electrical-job-toolkit/
+
+**Install on your phone:** open the link, then
+- Android (Chrome): tap **Install app** (or ⋮ → *Add to Home screen*)
+- iPhone (Safari): tap **Share** → **Add to Home Screen**
+
+Works offline after the first visit.
+
 > Learning aid only. Always double-check against your bender chart, the code book and your foreman.
 
 ## Features
@@ -60,7 +68,8 @@ so each person signs in and only *receives* what they're allowed to see:
 | Frontend | React + Vite (TypeScript), offline PWA |
 | Styling | Tailwind CSS |
 | Testing | Vitest |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions: tests, build, deploy to GitHub Pages on every push |
+| Offline | Web app manifest + hand-written service worker (installable PWA) |
 | Backend (phase 2) | Java Spring Boot, PostgreSQL, WebSockets |
 
 ## Running it locally
