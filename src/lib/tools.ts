@@ -3,6 +3,7 @@ import { BENDERS, backToBack, fourPointSaddle, kick, rollingOffset, stubUp, thre
 import { COMMON_ANGLES } from './offset'
 import { BOX_SIZES, BOX_WIRE_SIZES, boxFill, conduitFill, EMT_SIZES, sizeLabel, voltageDrop, WIRE_SIZES, type EmtSize, type WireSize } from './electrical'
 import { tapeCalculator } from './tape'
+import { materialList } from './materials'
 
 /**
  * Each tool = its questions + which math function to call.
@@ -232,6 +233,30 @@ export const TOOLS: ToolDefinition[] = [
         fixtureStuds: Number(v.studs),
         boxId: String(v.box) || undefined,
         extraVolume: v.ring as number | undefined,
+      }),
+  },
+  {
+    id: 'materials',
+    name: 'Material List',
+    category: 'Job',
+    description: 'What to pull off the truck for one EMT run: sticks, couplings, connectors, straps, wire.',
+    fields: [
+      { kind: 'length', key: 'run', title: 'How long is the run?', hint: 'Total length of the pipe run. Type feet with \' (e.g. 85\').', placeholder: "85'" },
+      { kind: 'choice', key: 'size', title: 'What size EMT?', hint: '', options: EMT_SIZES.slice(0, 6).map((s) => ({ value: s, label: s + '"' })) },
+      { kind: 'choice', key: 'terminations', title: 'How many boxes does it connect to?', hint: 'Each end into a box, panel or fitting gets a connector.', options: ['1', '2', '3', '4'].map((n) => ({ value: n, label: n })) },
+      { kind: 'choice', key: 'nineties', title: 'How many 90s (or equal bends)?', hint: 'Max 360° between pull points.', options: ['0', '1', '2', '3', '4', '5'].map((n) => ({ value: n, label: n })) },
+      { kind: 'number', key: 'wires', title: 'How many wires are you pulling? (optional)', hint: 'Leave blank to skip wire.', placeholder: '0', unit: 'wires', optional: true },
+      { kind: 'choice', key: 'waste', title: 'Extra for waste', hint: 'Cut-offs and mistakes.', options: [{ value: '0', label: '0%' }, { value: '0.05', label: '5%' }, { value: '0.1', label: '10%' }, { value: '0.15', label: '15%' }] },
+    ],
+    initial: { run: '', size: '3/4', terminations: '2', nineties: '0', wires: '', waste: '0.1' },
+    compute: (v) =>
+      materialList({
+        run: num(v.run),
+        size: String(v.size),
+        terminations: Number(v.terminations),
+        nineties: Number(v.nineties),
+        wires: (v.wires as number | undefined) ?? 0,
+        waste: Number(v.waste),
       }),
   },
 ]

@@ -2,24 +2,44 @@ import { useState } from 'react'
 import OffsetCalculator from './components/OffsetCalculator'
 import OffsetChart from './components/OffsetChart'
 import ToolScreen from './components/ToolScreen'
+import JobsScreen from './components/JobsScreen'
+import { useJobStore } from './components/useJobStore'
 import { TOOLS } from './lib/tools'
+import type { SavedCalc } from './lib/jobs'
 
 /** Everything that shows up on the home menu. */
 const MENU = [
+  { id: 'jobs', name: 'Jobs & Daily Reports', description: 'Saved calcs and reports for each job', category: 'Job' },
   { id: 'offset', name: 'Offset', description: 'Move over to clear something', category: 'Bending' },
   { id: 'chart', name: 'Offset Chart', description: 'Multipliers and shrink', category: 'Bending' },
   ...TOOLS.map((t) => ({ id: t.id, name: t.name, description: t.description, category: t.category })),
 ]
-const CATEGORIES = ['Bending', 'Electrical', 'Measuring'] as const
+const CATEGORIES = ['Bending', 'Electrical', 'Measuring', 'Job'] as const
 
 export default function App() {
   // null = home menu
   const [screen, setScreen] = useState<string | null>(null)
+  const store = useJobStore()
 
   // Offset state lives here so the Offset Chart can hand its angle to the calculator.
   const [depthText, setDepthText] = useState('')
   const [angle, setAngle] = useState(30)
   const [obstacleText, setObstacleText] = useState('')
+
+  // When a saved calc is reopened, its tool restarts with the saved inputs.
+  // Changing the "version" in the React key forces a fresh ToolScreen.
+  const [reopened, setReopened] = useState<Record<string, { inputs: Record<string, string>; version: number }>>({})
+
+  function openCalc(calc: SavedCalc) {
+    if (calc.toolId === 'offset') {
+      setDepthText(calc.inputs.depth ?? '')
+      setAngle(Number(calc.inputs.angle ?? 30))
+      setObstacleText(calc.inputs.obstacle ?? '')
+    } else {
+      setReopened((prev) => ({ ...prev, [calc.toolId]: { inputs: calc.inputs, version: (prev[calc.toolId]?.version ?? 0) + 1 } }))
+    }
+    setScreen(calc.toolId)
+  }
 
   const current = MENU.find((m) => m.id === screen)
 
@@ -36,7 +56,7 @@ export default function App() {
         ) : (
           <>
             <h1 className="text-3xl font-black text-amber-400">Electrical Job Toolkit</h1>
-            <p className="text-slate-400">Bending, electrical calcs and measuring, with the work shown.</p>
+            <p className="text-slate-400">Bending, electrical calcs and job tracking, with the work shown.</p>
           </>
         )}
       </header>
@@ -63,8 +83,10 @@ export default function App() {
         </nav>
       )}
 
+      {screen === 'jobs' && <JobsScreen store={store} onOpenCalc={openCalc} />}
+
       {screen === 'offset' && (
-        <OffsetCalculator {...{ depthText, setDepthText, angle, setAngle, obstacleText, setObstacleText }} />
+        <OffsetCalculator {...{ depthText, setDepthText, angle, setAngle, obstacleText, setObstacleText, store }} />
       )}
 
       {screen === 'chart' && (
@@ -79,14 +101,17 @@ export default function App() {
       )}
 
       {/* Keep every tool mounted (just hidden) so your numbers survive switching screens. */}
-      {TOOLS.map((tool) => (
-        <div key={tool.id} hidden={screen !== tool.id}>
-          <ToolScreen tool={tool} />
-        </div>
-      ))}
+      {TOOLS.map((tool) => {
+        const r = reopened[tool.id]
+        return (
+          <div key={`${tool.id}-${r?.version ?? 0}`} hidden={screen !== tool.id}>
+            <ToolScreen tool={r ? { ...tool, initial: { ...tool.initial, ...r.inputs } } : tool} store={store} />
+          </div>
+        )
+      })}
 
       <footer className="mt-10 text-center text-xs text-slate-500">
-        Learning aid only. Double-check with your bender chart and foreman.
+        Learning aid only. Double-check with your bender chart, the code book and your foreman.
       </footer>
     </main>
   )

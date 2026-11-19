@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { ToolResult } from '../lib/bends'
 import { formatLength, parseLength } from '../lib/measure'
+import { summarize } from '../lib/jobs'
+import SaveToJob from './SaveToJob'
+import type { JobStore } from './useJobStore'
 import { Answer, ChoiceButtons, Counters, HowToBend, inputClass, PipeMarks, Question, ShowTheMath, Stat, Warning } from './ui'
 
 /**
@@ -39,7 +42,7 @@ export interface ToolDefinition {
   id: string
   name: string
   description: string
-  category: 'Bending' | 'Electrical' | 'Measuring'
+  category: 'Bending' | 'Electrical' | 'Measuring' | 'Job'
   fields: Field[]
   /** Starting values. counts fields store JSON, e.g. '{"12":3}' */
   initial: Record<string, string>
@@ -97,7 +100,7 @@ function parseFields(tool: ToolDefinition, raw: Record<string, string>): Parsed 
   }
 }
 
-export default function ToolScreen({ tool }: { tool: ToolDefinition }) {
+export default function ToolScreen({ tool, store }: { tool: ToolDefinition; store?: JobStore }) {
   const [raw, setRaw] = useState<Record<string, string>>(tool.initial)
   const set = (key: string, value: string) => setRaw((prev) => ({ ...prev, [key]: value }))
 
@@ -176,6 +179,7 @@ export default function ToolScreen({ tool }: { tool: ToolDefinition }) {
           <PipeMarks marks={plan.marks} />
           <HowToBend steps={plan.howToBend} title={plan.notesTitle} />
           <ShowTheMath steps={plan.steps} />
+          {store && <SaveToJob store={store} toolId={tool.id} toolName={tool.name} inputs={raw} summary={summarize(plan)} />}
         </div>
       )}
     </section>

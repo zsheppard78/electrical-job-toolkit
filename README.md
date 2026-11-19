@@ -25,14 +25,17 @@ project and crew management with team chat.
 **Measuring**
 - **Feet-inches calculator**: `7' 5-3/8" - 2' 11-3/4"`, `10' / 2`, `14-1/2 x 3`
 
+**Job**
+- **Material list**: one EMT run → sticks, couplings, connectors, straps (NEC 358.30 spacing), wire footage; warns over 360° of bends
+- **Save to a job**: every result has a "Save to a job" button with a location ("Run to panel B"); reopen it later with the same inputs
+- **Daily reports**: date, hours, work done, materials (one tap pulls in today's material lists), issues, plan for tomorrow; send by share sheet, copy or email
+- Jobs are stored on the device (localStorage), so everything works offline
+
 - Every tool: numbered questions, marks drawn on the pipe, "How to bend it" steps, and "Show me the math"
 - **Tape-measure input**: type lengths the way you'd say them: `7' 5-3/8"`, `5 3/8`, `7ft 5in`
 
 ### Next
-- Material list for a run (sticks of EMT, couplings, connectors, straps)
-- Daily report (work done, hours, notes; share with your foreman)
-- Save calculations to a job
-- Installable, offline PWA + live site
+- Installable, offline PWA + live site (GitHub Actions CI/CD)
 
 ### Phase 2: Projects & crews (Spring Boot backend)
 - **Projects** with a chain of command:
@@ -69,9 +72,14 @@ src/
     bends.ts      saddles, rolling offset, stub-ups, back-to-back, kick
     electrical.ts conduit fill, voltage drop / wire size, box fill (NEC table data)
     tape.ts       feet-inches calculator
+    materials.ts  material takeoff for an EMT run
+    jobs.ts       jobs, saved calcs, daily reports (pure functions) + saving to the device
     tools.ts      each tool's questions + which math to run
   components/
     ToolScreen.tsx  one reusable screen that runs any tool in tools.ts
     ui.tsx          shared pieces (question cards, answers, pipe-marks drawing)
+    JobsScreen.tsx  job list, job detail, daily report form
+    SaveToJob.tsx   the "Save to a job" button/form
+    useJobStore.ts  custom hook: load jobs on start, save on every change
   App.tsx       app layout
 ```

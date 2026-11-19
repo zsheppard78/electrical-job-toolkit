@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { calculateOffset, COMMON_ANGLES, type OffsetResult } from '../lib/offset'
 import { formatLength, parseLength } from '../lib/measure'
+import { summarize } from '../lib/jobs'
+import SaveToJob from './SaveToJob'
+import type { JobStore } from './useJobStore'
 import { Answer, ChoiceButtons, HowToBend, inputClass, Question, ShowTheMath, Stat, Warning } from './ui'
 
 interface Props {
@@ -10,6 +13,7 @@ interface Props {
   setAngle: (a: number) => void
   obstacleText: string
   setObstacleText: (v: string) => void
+  store?: JobStore
 }
 
 /**
@@ -90,7 +94,7 @@ function OffsetDiagram({ angle, depth, result, obstacle }: { angle: number; dept
 }
 
 export default function OffsetCalculator(props: Props) {
-  const { depthText, setDepthText, angle, setAngle, obstacleText, setObstacleText } = props
+  const { depthText, setDepthText, angle, setAngle, obstacleText, setObstacleText, store } = props
 
   const depth = parseLength(depthText)
   const obstacle = obstacleText.trim() ? parseLength(obstacleText) : undefined
@@ -163,6 +167,26 @@ export default function OffsetCalculator(props: Props) {
           )}
 
           <ShowTheMath steps={result.steps} />
+          {store && (
+            <SaveToJob
+              store={store}
+              toolId="offset"
+              toolName="Offset"
+              inputs={{ depth: depthText, angle: String(angle), obstacle: obstacleText }}
+              summary={summarize({
+                marks: result.marks
+                  ? [
+                      { at: result.marks.first, label: '1st mark', fromEnd: true },
+                      { at: result.marks.second, label: '2nd mark', fromEnd: true },
+                    ]
+                  : [],
+                headline: [{ label: `${angle}° offset, depth`, value: formatLength(depth!), good: true }],
+                stats: [],
+                howToBend: [],
+                steps: [],
+              })}
+            />
+          )}
         </div>
       )}
     </section>
