@@ -4,12 +4,13 @@ import OffsetChart from './components/OffsetChart'
 import ToolScreen from './components/ToolScreen'
 import JobsScreen from './components/JobsScreen'
 import { useJobStore } from './components/useJobStore'
+import { useTeamStore } from './components/useTeamStore'
 import { TOOLS } from './lib/tools'
 import type { SavedCalc } from './lib/jobs'
 
 /** Everything that shows up on the home menu. */
 const MENU = [
-  { id: 'jobs', name: 'Jobs & Daily Reports', description: 'Saved calcs and reports for each job', category: 'Job' },
+  { id: 'jobs', name: 'Jobs, Crews & Reports', description: 'Team tasks, GF notes, saved calcs, daily reports', category: 'Job' },
   { id: 'offset', name: 'Offset', description: 'Move over to clear something', category: 'Bending' },
   { id: 'chart', name: 'Offset Chart', description: 'Multipliers and shrink', category: 'Bending' },
   ...TOOLS.map((t) => ({ id: t.id, name: t.name, description: t.description, category: t.category })),
@@ -20,6 +21,7 @@ export default function App() {
   // null = home menu
   const [screen, setScreen] = useState<string | null>(null)
   const store = useJobStore()
+  const teamStore = useTeamStore()
 
   // Offset state lives here so the Offset Chart can hand its angle to the calculator.
   const [depthText, setDepthText] = useState('')
@@ -83,7 +85,7 @@ export default function App() {
         </nav>
       )}
 
-      {screen === 'jobs' && <JobsScreen store={store} onOpenCalc={openCalc} />}
+      {screen === 'jobs' && <JobsScreen store={store} teamStore={teamStore} onOpenCalc={openCalc} />}
 
       {screen === 'offset' && (
         <OffsetCalculator {...{ depthText, setDepthText, angle, setAngle, obstacleText, setObstacleText, store }} />

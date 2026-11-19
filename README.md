@@ -29,6 +29,11 @@ project and crew management with team chat.
 - **Material list**: one EMT run → sticks, couplings, connectors, straps (NEC 358.30 spacing), wire footage; warns over 360° of bends
 - **Save to a job**: every result has a "Save to a job" button with a location ("Run to panel B"); reopen it later with the same inputs
 - **Daily reports**: date, hours, work done, materials (one tap pulls in today's material lists), issues, plan for tomorrow; send by share sheet, copy or email
+- **Team & Tasks** (prototype): PMs, General Foremen (one per area/floor), Foremen and their crews
+  - Tasks per crew with three visibility levels: *Whole crew*, *Foreman & up*, *GF & PM only*
+  - Crew members can check off and comment on tasks they can see, but can't create, edit or delete
+  - GF notes go to every foreman in an area or to one foreman; crew members never see notes
+  - "Viewing as" switcher to demo each role; all rules are pure functions in `crew.ts`, ready for the server to enforce
 - Jobs are stored on the device (localStorage), so everything works offline
 
 - Every tool: numbered questions, marks drawn on the pipe, "How to bend it" steps, and "Show me the math"
@@ -37,7 +42,9 @@ project and crew management with team chat.
 ### Next
 - Installable, offline PWA + live site (GitHub Actions CI/CD)
 
-### Phase 2: Projects & crews (Spring Boot backend)
+### Phase 2: Real accounts (Spring Boot backend)
+The Team & Tasks prototype already has the roles and permission rules. Phase 2 moves them to a server
+so each person signs in and only *receives* what they're allowed to see:
 - **Projects** with a chain of command:
   - Project Managers (several per project)
   - General Foremen (each over a floor or area)
@@ -74,6 +81,7 @@ src/
     tape.ts       feet-inches calculator
     materials.ts  material takeoff for an EMT run
     jobs.ts       jobs, saved calcs, daily reports (pure functions) + saving to the device
+    crew.ts       roles, crews, tasks, notes and every permission rule
     tools.ts      each tool's questions + which math to run
   components/
     ToolScreen.tsx  one reusable screen that runs any tool in tools.ts
@@ -81,5 +89,6 @@ src/
     JobsScreen.tsx  job list, job detail, daily report form
     SaveToJob.tsx   the "Save to a job" button/form
     useJobStore.ts  custom hook: load jobs on start, save on every change
+    TeamScreen.tsx  team & tasks: viewing-as switcher, tasks, notes, org chart
   App.tsx       app layout
 ```

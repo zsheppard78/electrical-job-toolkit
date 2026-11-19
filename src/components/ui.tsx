@@ -196,3 +196,17 @@ export function Counters({
     </div>
   )
 }
+
+/** Button that needs two taps, so you can't delete something by accident with a glove. */
+export function DeleteButton({ onDelete, label = 'Delete' }: { onDelete: () => void; label?: string }) {
+  const [armed, setArmed] = useState(false)
+  return (
+    <button
+      onClick={() => (armed ? onDelete() : setArmed(true))}
+      onBlur={() => setArmed(false)}
+      className={`rounded-lg py-3 px-4 font-semibold ${armed ? 'bg-rose-600 text-white' : 'bg-slate-700 text-rose-300'}`}
+    >
+      {armed ? 'Tap again to delete' : label}
+    </button>
+  )
+}

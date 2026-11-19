@@ -12,12 +12,15 @@ import {
   type SavedCalc,
 } from '../lib/jobs'
 import type { JobStore } from './useJobStore'
-import { inputClass, Warning } from './ui'
+import type { TeamStore } from './useTeamStore'
+import TeamScreen from './TeamScreen'
+import { DeleteButton, inputClass, Warning } from './ui'
 
-type View = { name: 'list' } | { name: 'job'; jobId: string } | { name: 'report'; jobId: string; reportId?: string }
+type View = { name: 'list' } | { name: 'job'; jobId: string } | { name: 'report'; jobId: string; reportId?: string } | { name: 'team'; jobId: string }
 
 interface Props {
   store: JobStore
+  teamStore: TeamStore
   /** Reopen a saved calculation in its tool */
   onOpenCalc: (calc: SavedCalc) => void
 }
@@ -25,24 +28,14 @@ interface Props {
 const card = 'rounded-xl bg-slate-800 p-4'
 const button = 'rounded-lg py-3 px-4 font-semibold'
 
-/** Button that needs two taps, so you can't delete something by accident with a glove. */
-function DeleteButton({ onDelete, label = 'Delete' }: { onDelete: () => void; label?: string }) {
-  const [armed, setArmed] = useState(false)
-  return (
-    <button
-      onClick={() => (armed ? onDelete() : setArmed(true))}
-      onBlur={() => setArmed(false)}
-      className={`${button} ${armed ? 'bg-rose-600 text-white' : 'bg-slate-700 text-rose-300'}`}
-    >
-      {armed ? 'Tap again to delete' : label}
-    </button>
-  )
-}
-
-export default function JobsScreen({ store, onOpenCalc }: Props) {
+export default function JobsScreen({ store, teamStore, onOpenCalc }: Props) {
   const [view, setView] = useState<View>({ name: 'list' })
 
-  if (view.name === 'job') return <JobDetail store={store} jobId={view.jobId} setView={setView} onOpenCalc={onOpenCalc} />
+  if (view.name === 'team') {
+    const job = store.state.jobs.find((j) => j.id === view.jobId)
+    return <TeamScreen jobId={view.jobId} jobName={job?.name ?? 'Job'} teamStore={teamStore} onBack={() => setView({ name: 'job', jobId: view.jobId })} />
+  }
+  if (view.name === 'job') return <JobDetail store={store} teamStore={teamStore} jobId={view.jobId} setView={setView} onOpenCalc={onOpenCalc} />
   if (view.name === 'report') return <ReportForm store={store} jobId={view.jobId} reportId={view.reportId} setView={setView} />
   return <JobList store={store} setView={setView} />
 }
@@ -102,7 +95,7 @@ function JobList({ store, setView }: { store: JobStore; setView: (v: View) => vo
 
 // ---------------------------------------------------------------------------
 
-function JobDetail({ store, jobId, setView, onOpenCalc }: { store: JobStore; jobId: string; setView: (v: View) => void; onOpenCalc: (c: SavedCalc) => void }) {
+function JobDetail({ store, teamStore, jobId, setView, onOpenCalc }: { store: JobStore; teamStore: TeamStore; jobId: string; setView: (v: View) => void; onOpenCalc: (c: SavedCalc) => void }) {
   const { state, setState } = store
   const job = state.jobs.find((j) => j.id === jobId)
   if (!job) {
@@ -123,9 +116,14 @@ function JobDetail({ store, jobId, setView, onOpenCalc }: { store: JobStore; job
       </button>
       <h2 className="text-2xl font-black text-white">{job.name}</h2>
 
-      <button onClick={() => setView({ name: 'report', jobId })} className={`${button} w-full bg-amber-400 text-lg text-slate-900`}>
-        + Daily report
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setView({ name: 'team', jobId })} className={`${button} bg-sky-700 text-lg text-white`}>
+          Team & Tasks
+        </button>
+        <button onClick={() => setView({ name: 'report', jobId })} className={`${button} bg-amber-400 text-lg text-slate-900`}>
+          + Daily report
+        </button>
+      </div>
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-400">Daily reports</h3>
@@ -171,6 +169,11 @@ function JobDetail({ store, jobId, setView, onOpenCalc }: { store: JobStore; job
         label="Delete this job"
         onDelete={() => {
           setState(deleteJob(state, jobId))
+          teamStore.setTeams((all) => {
+            const rest = { ...all }
+            delete rest[jobId]
+            return rest
+          })
           setView({ name: 'list' })
         }}
       />
