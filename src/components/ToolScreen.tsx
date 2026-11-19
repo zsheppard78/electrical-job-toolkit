@@ -1,59 +1,108 @@
 import { useMemo, useState } from 'react'
-import type { BendPlan } from '../lib/bends'
+import type { ToolResult } from '../lib/bends'
 import { formatLength, parseLength } from '../lib/measure'
-import { Answer, ChoiceButtons, HowToBend, inputClass, PipeMarks, Question, ShowTheMath, Stat, Warning } from './ui'
+import { Answer, ChoiceButtons, Counters, HowToBend, inputClass, PipeMarks, Question, ShowTheMath, Stat, Warning } from './ui'
 
 /**
- * One screen that can run ANY bend calculator.
+ * One screen that can run ANY tool.
  * Each tool just describes its questions (fields) and a compute function;
  * this component handles inputs, validation and showing the results.
  */
 
-export type Field =
-  | { kind: 'length'; key: string; title: string; hint: string; placeholder: string; optional?: boolean }
-  | { kind: 'choice'; key: string; title: string; hint: string; options: { value: string; label: string }[] }
+interface FieldBase {
+  key: string
+  title: string
+  hint: string
+}
 
-/** What compute() receives: lengths parsed to inches (undefined if blank), choices as strings. */
-export type Values = Record<string, number | string | undefined>
+export type Field =
+  /** Tape-measure length → inches */
+  | (FieldBase & { kind: 'length'; placeholder: string; optional?: boolean })
+  /** Plain number (amps, feet, volts) */
+  | (FieldBase & { kind: 'number'; placeholder: string; unit?: string; optional?: boolean })
+  /** Pick one */
+  | (FieldBase & { kind: 'choice'; options: { value: string; label: string }[] })
+  /** +/− counters (wires by size) */
+  | (FieldBase & { kind: 'counts'; items: { value: string; label: string }[] })
+  /** Free text, passed through as-is */
+  | (FieldBase & { kind: 'text'; placeholder: string })
+
+/**
+ * What compute() receives:
+ *  length/number → number (undefined if blank & optional)
+ *  choice/text   → string
+ *  counts        → Record<string, number>
+ */
+export type Values = Record<string, unknown>
 
 export interface ToolDefinition {
   id: string
   name: string
   description: string
+  category: 'Bending' | 'Electrical' | 'Measuring'
   fields: Field[]
+  /** Starting values. counts fields store JSON, e.g. '{"12":3}' */
   initial: Record<string, string>
-  compute: (values: Values) => BendPlan
-  /** Shown when the optional fields are blank, e.g. "Fill in step 3 to get your marks." */
+  compute: (values: Values) => ToolResult
+  /** Shown when there are no marks yet, e.g. "Fill in step 3 to get your marks." */
   marksHint?: string
+}
+
+type Parsed = { plan: ToolResult; error: null; waiting: null } | { plan: null; error: string | null; waiting: string | null }
+
+function parseFields(tool: ToolDefinition, raw: Record<string, string>): Parsed {
+  const values: Values = {}
+  for (const [i, field] of tool.fields.entries()) {
+    const text = raw[field.key] ?? ''
+    const step = `Step ${i + 1}`
+
+    switch (field.kind) {
+      case 'choice':
+        values[field.key] = text
+        break
+      case 'text':
+        if (text.trim() === '') return { plan: null, error: null, waiting: `Fill in step ${i + 1} to get started.` }
+        values[field.key] = text
+        break
+      case 'counts': {
+        const c = text ? (JSON.parse(text) as Record<string, number>) : {}
+        if (!Object.values(c).some((n) => n > 0)) return { plan: null, error: null, waiting: `Tap + in step ${i + 1} to add wires.` }
+        values[field.key] = c
+        break
+      }
+      case 'length':
+      case 'number': {
+        if (text.trim() === '') {
+          if (!field.optional) return { plan: null, error: null, waiting: `Fill in step ${i + 1} to get started.` }
+          values[field.key] = undefined
+          break
+        }
+        const n = field.kind === 'length' ? parseLength(text) : Number(text)
+        if (n === null || Number.isNaN(n)) {
+          return {
+            plan: null,
+            error: field.kind === 'length' ? `${step} should look like 6, 5-1/2, or 4' 2-1/2"` : `${step} should be a number`,
+            waiting: null,
+          }
+        }
+        values[field.key] = n
+        break
+      }
+    }
+  }
+  try {
+    return { plan: tool.compute(values), error: null, waiting: null }
+  } catch (e) {
+    return { plan: null, error: (e as Error).message, waiting: null }
+  }
 }
 
 export default function ToolScreen({ tool }: { tool: ToolDefinition }) {
   const [raw, setRaw] = useState<Record<string, string>>(tool.initial)
   const set = (key: string, value: string) => setRaw((prev) => ({ ...prev, [key]: value }))
 
-  const { plan, error, waiting } = useMemo(() => {
-    const values: Values = {}
-    for (const [i, field] of tool.fields.entries()) {
-      const text = raw[field.key] ?? ''
-      if (field.kind === 'choice') {
-        values[field.key] = text
-        continue
-      }
-      if (text.trim() === '') {
-        if (!field.optional) return { plan: null, error: null, waiting: `Fill in step ${i + 1} to get started.` }
-        values[field.key] = undefined
-        continue
-      }
-      const inches = parseLength(text)
-      if (inches === null) return { plan: null, error: `Step ${i + 1} should look like 6, 5-1/2, or 4' 2-1/2"`, waiting: null }
-      values[field.key] = inches
-    }
-    try {
-      return { plan: tool.compute(values), error: null, waiting: null }
-    } catch (e) {
-      return { plan: null, error: (e as Error).message, waiting: null }
-    }
-  }, [raw, tool])
+  const result = useMemo(() => parseFields(tool, raw), [raw, tool])
+  const plan = result.plan
 
   return (
     <section className="space-y-4">
@@ -61,26 +110,47 @@ export default function ToolScreen({ tool }: { tool: ToolDefinition }) {
 
       {tool.fields.map((field, i) => (
         <Question key={field.key} n={i + 1} title={field.title} hint={field.hint}>
-          {field.kind === 'length' ? (
-            <input
-              className={inputClass}
-              inputMode="decimal"
-              placeholder={field.placeholder}
-              value={raw[field.key] ?? ''}
-              onChange={(e) => set(field.key, e.target.value)}
-            />
-          ) : (
+          {(field.kind === 'length' || field.kind === 'number' || field.kind === 'text') && (
+            <div className="relative">
+              <input
+                className={inputClass}
+                inputMode={field.kind === 'number' ? 'decimal' : 'text'}
+                placeholder={field.placeholder}
+                value={raw[field.key] ?? ''}
+                onChange={(e) => set(field.key, e.target.value)}
+              />
+              {field.kind === 'number' && field.unit && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">{field.unit}</span>
+              )}
+            </div>
+          )}
+          {field.kind === 'choice' && (
             <ChoiceButtons options={field.options} value={raw[field.key]} onChange={(v) => set(field.key, v)} />
+          )}
+          {field.kind === 'counts' && (
+            <Counters
+              items={field.items}
+              values={raw[field.key] ? JSON.parse(raw[field.key]) : {}}
+              onChange={(v) => set(field.key, JSON.stringify(v))}
+            />
           )}
         </Question>
       ))}
 
-      {error && <Warning>{error}</Warning>}
-      {waiting && <p className="rounded-lg bg-slate-800 p-3 text-slate-400">{waiting}</p>}
+      {result.error && <Warning>{result.error}</Warning>}
+      {result.waiting && <p className="rounded-lg bg-slate-800 p-3 text-slate-400">{result.waiting}</p>}
 
       {plan && (
         <div className="space-y-4 rounded-xl border-2 border-amber-400 bg-slate-800 p-4">
           {plan.warning && <Warning>{plan.warning}</Warning>}
+
+          {plan.headline && (
+            <div className="space-y-2">
+              {plan.headline.map((h) => (
+                <Answer key={h.label} label={h.label} value={h.value} good={h.good} />
+              ))}
+            </div>
+          )}
 
           {plan.marks.length > 0 ? (
             <div className="space-y-2">
@@ -95,14 +165,16 @@ export default function ToolScreen({ tool }: { tool: ToolDefinition }) {
             tool.marksHint && <p className="rounded-lg bg-slate-900 p-3 text-slate-300">{tool.marksHint}</p>
           )}
 
-          <div className="grid grid-cols-2 gap-3 text-center">
-            {plan.stats.map((s) => (
-              <Stat key={s.label} label={s.label} value={s.value} />
-            ))}
-          </div>
+          {plan.stats.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 text-center">
+              {plan.stats.map((s) => (
+                <Stat key={s.label} label={s.label} value={s.value} />
+              ))}
+            </div>
+          )}
 
           <PipeMarks marks={plan.marks} />
-          <HowToBend steps={plan.howToBend} />
+          <HowToBend steps={plan.howToBend} title={plan.notesTitle} />
           <ShowTheMath steps={plan.steps} />
         </div>
       )}

@@ -15,11 +15,18 @@ export interface Mark {
 
 export interface BendPlan {
   marks: Mark[]
+  /** Big answers at the top (non-bending tools). good=false shows red. */
+  headline?: { label: string; value: string; good: boolean }[]
   stats: { label: string; value: string }[]
   howToBend: string[]
+  /** Title for the howToBend list; defaults to "How to bend it" */
+  notesTitle?: string
   steps: Step[]
   warning?: string
 }
+
+/** Same shape, general name: every tool returns a ToolResult. */
+export type ToolResult = BendPlan
 
 const rad = (deg: number) => (deg * Math.PI) / 180
 const deg = (r: number) => (r * 180) / Math.PI

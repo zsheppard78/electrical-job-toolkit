@@ -16,13 +16,23 @@ project and crew management with team chat.
 - **90° stub-up** with take-up for 1/2"–1-1/4" EMT benders
 - **Back-to-back 90s**
 - **Kick**
+
+**Electrical**
+- **Conduit fill**: count your wires with +/− buttons; get the smallest EMT, or check a pipe you picked (NEC Ch. 9)
+- **Voltage drop / wire size**: recommends a wire that handles both the amps and the distance, with 125% for continuous loads
+- **Box fill**: counts wires, devices, clamps, grounds and studs; checks your box (NEC 314.16)
+
+**Measuring**
+- **Feet-inches calculator**: `7' 5-3/8" - 2' 11-3/4"`, `10' / 2`, `14-1/2 x 3`
+
 - Every tool: numbered questions, marks drawn on the pipe, "How to bend it" steps, and "Show me the math"
 - **Tape-measure input**: type lengths the way you'd say them: `7' 5-3/8"`, `5 3/8`, `7ft 5in`
 
 ### Next
-- Feet-inches-fractions calculator
-- Installable, offline PWA
-- Voltage drop, box fill, conduit fill
+- Material list for a run (sticks of EMT, couplings, connectors, straps)
+- Daily report (work done, hours, notes; share with your foreman)
+- Save calculations to a job
+- Installable, offline PWA + live site
 
 ### Phase 2: Projects & crews (Spring Boot backend)
 - **Projects** with a chain of command:
@@ -57,6 +67,8 @@ src/
     measure.ts    parse/format tape-measure lengths
     offset.ts     offset bending math + offset chart
     bends.ts      saddles, rolling offset, stub-ups, back-to-back, kick
+    electrical.ts conduit fill, voltage drop / wire size, box fill (NEC table data)
+    tape.ts       feet-inches calculator
     tools.ts      each tool's questions + which math to run
   components/
     ToolScreen.tsx  one reusable screen that runs any tool in tools.ts

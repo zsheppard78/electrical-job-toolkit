@@ -37,7 +37,11 @@ export function ChoiceButtons<T extends string | number>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(options.length, 5)}, minmax(0, 1fr))` }}>
+    // Long labels (like box sizes) get 2 columns; short ones (angles) up to 5.
+    <div
+      className="grid gap-2"
+      style={{ gridTemplateColumns: `repeat(${options.some((o) => o.label.length > 8) ? 2 : Math.min(options.length, 5)}, minmax(0, 1fr))` }}
+    >
       {options.map((o) => (
         <button
           key={String(o.value)}
@@ -51,13 +55,17 @@ export function ChoiceButtons<T extends string | number>({
   )
 }
 
-export function Answer({ n, label, value }: { n: number; label: string; value: string }) {
+/** A big answer. With n: a numbered mark. With good: green (pass) or red (fail). */
+export function Answer({ n, label, value, good }: { n?: number; label: string; value: string; good?: boolean }) {
+  const color = good === undefined ? 'text-white' : good ? 'text-emerald-400' : 'text-rose-400'
   return (
     <div className="flex items-center gap-3 rounded-lg bg-slate-900 p-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500 text-lg font-bold text-white">{n}</span>
+      {n !== undefined && (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500 text-lg font-bold text-white">{n}</span>
+      )}
       <div>
         <p className="text-sm text-slate-400">{label}</p>
-        <p className="text-3xl font-black text-white">{value}</p>
+        <p className={`text-3xl font-black ${color}`}>{value}</p>
       </div>
     </div>
   )
@@ -76,11 +84,11 @@ export function Warning({ children }: { children: ReactNode }) {
   return <p className="rounded-lg bg-rose-950 p-3 text-rose-300">{children}</p>
 }
 
-export function HowToBend({ steps }: { steps: string[] }) {
+export function HowToBend({ steps, title = 'How to bend it' }: { steps: string[]; title?: string }) {
   if (steps.length === 0) return null
   return (
     <div className="rounded-lg bg-slate-900 p-3">
-      <p className="mb-2 font-semibold text-white">How to bend it</p>
+      <p className="mb-2 font-semibold text-white">{title}</p>
       <ol className="list-decimal space-y-1 pl-5 text-slate-200">
         {steps.map((s) => (
           <li key={s}>{s}</li>
@@ -151,6 +159,40 @@ export function PipeMarks({ marks }: { marks: Mark[] }) {
           )
         })}
       </svg>
+    </div>
+  )
+}
+
+/** +/− counters, e.g. how many #12 wires. Big buttons for gloves. */
+export function Counters({
+  items,
+  values,
+  onChange,
+}: {
+  items: { value: string; label: string }[]
+  values: Record<string, number>
+  onChange: (values: Record<string, number>) => void
+}) {
+  const set = (key: string, n: number) => onChange({ ...values, [key]: Math.max(0, n) })
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((item) => {
+        const n = values[item.value] ?? 0
+        return (
+          <div key={item.value} className={`flex items-center justify-between rounded-lg p-1 ${n > 0 ? 'bg-slate-700' : 'bg-slate-900'}`}>
+            <button onClick={() => set(item.value, n - 1)} className="h-11 w-11 rounded-md bg-slate-800 text-2xl text-white" aria-label={`fewer ${item.label}`}>
+              −
+            </button>
+            <span className="text-center">
+              <span className="block text-xs text-slate-400">{item.label}</span>
+              <span className="text-xl font-bold text-white">{n}</span>
+            </span>
+            <button onClick={() => set(item.value, n + 1)} className="h-11 w-11 rounded-md bg-slate-800 text-2xl text-white" aria-label={`more ${item.label}`}>
+              +
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }
